@@ -1,44 +1,62 @@
 {
-    "name": "zola/crud-generator",
-    "description": "Create CRUD process complete with validation using Laravel Spatie Data",
-    "license": "proprietary",
-    "type": "library",
-    "require": {
-        "php": "^8.2",
-        "illuminate/support": "^12.0",
-        "illuminate/contracts": "^12.0"
-    },
-    "require-dev": {
-        "orchestra/testbench": "^10.0",
-        "pestphp/pest": "^3.0",
-        "pestphp/pest-plugin-laravel": "^3.0"
-    },
-    "autoload": {
-        "psr-4": {
-            "Zola\\CrudGenerator\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Zola\\CrudGenerator\\Tests\\": "tests/"
-        }
-    },
-    "scripts": {
-        "test": "vendor/bin/pest"
-    },
-    "config": {
-        "sort-packages": true,
-        "allow-plugins": {
-            "pestphp/pest-plugin": true
-        }
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Zola\\CrudGenerator\\CrudGeneratorServiceProvider"
-            ]
-        }
-    },
-    "minimum-stability": "dev",
-    "prefer-stable": true
+  "name": "zola/crud-generator",
+  "description": "Artisan generators that scaffold Model, Repository and Service classes for Laravel.",
+  "license": "MIT",
+  "type": "library",
+  "keywords": [
+    "laravel",
+    "artisan",
+    "crud",
+    "generator",
+    "scaffold",
+    "repository",
+    "service"
+  ],
+  "authors": [
+    {
+      "name": "Zola"
+    }
+  ],
+  "support": {
+    "issues": "https://github.com/zola/crud-generator/issues",
+    "source": "https://github.com/zola/crud-generator"
+  },
+  "require": {
+    "php": "^8.2",
+    "illuminate/support": "^12.0",
+    "illuminate/contracts": "^12.0"
+  },
+  "require-dev": {
+    "orchestra/testbench": "^10.0",
+    "pestphp/pest": "^3.0",
+    "pestphp/pest-plugin-laravel": "^3.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Zola\\CrudGenerator\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Zola\\CrudGenerator\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "vendor/bin/pest"
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Zola\\CrudGenerator\\CrudGeneratorServiceProvider"
+      ]
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
 }
