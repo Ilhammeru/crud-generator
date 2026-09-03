@@ -1,6 +1,6 @@
 # Zola CRUD Generator
 
-[![Tests](https://github.com/zola/crud-generator/actions/workflows/tests.yml/badge.svg)](https://github.com/zola/crud-generator/actions/workflows/tests.yml)
+[![Tests](https://github.com/Ilhammeru/crud-generator/actions/workflows/tests.yml/badge.svg)](https://github.com/Ilhammeru/crud-generator/actions/workflows/tests.yml)
 
 Artisan generators that scaffold a Model, a Repository and a Service in one go,
 following a repository/service layering convention. Built for Laravel 12 and
@@ -58,7 +58,7 @@ up immediately, with no reinstall.
 "repositories": [
     {
         "type": "vcs",
-        "url": "https://github.com/zola/crud-generator"
+        "url": "https://github.com/Ilhammeru/crud-generator"
     }
 ]
 ```
@@ -232,4 +232,4 @@ composer test
 
 ## License
 
-Proprietary.
+Released under the [MIT License](LICENSE.md).
