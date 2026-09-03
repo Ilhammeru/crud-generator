@@ -1,5 +1,7 @@
 # Zola CRUD Generator
 
+[![Tests](https://github.com/zola/crud-generator/actions/workflows/tests.yml/badge.svg)](https://github.com/zola/crud-generator/actions/workflows/tests.yml)
+
 Artisan generators that scaffold a Model, a Repository and a Service in one go,
 following a repository/service layering convention. Built for Laravel 12 and
 optionally aware of the [Laravel Modules](https://github.com/nWidart/laravel-modules)
