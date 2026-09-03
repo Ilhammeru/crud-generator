@@ -7,12 +7,20 @@ use Illuminate\Support\Str;
 use Zola\CrudGenerator\CrudGenerator;
 use Zola\CrudGenerator\Enums\GeneratorType;
 
+/**
+ * Console command that generates an Eloquent model from the package stub.
+ */
 class ModelGenerator extends Command
 {
     protected $signature = 'zola:make-model {model} {moduleName?}';
 
     protected $description = "Create model for zola crud generator";
 
+    /**
+     * Execute the console command.
+     *
+     * @return int The command exit code (self::SUCCESS or self::FAILURE).
+     */
     public function handle(): int
     {
         $name = $this->argument('model');

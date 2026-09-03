@@ -7,8 +7,20 @@ use Zola\CrudGenerator\Console\Commands\ModelGenerator;
 use Zola\CrudGenerator\Console\Commands\RepositoryGenerator;
 use Zola\CrudGenerator\Console\Commands\ServiceGenerator;
 
+/**
+ * Service provider for the CRUD generator package.
+ *
+ * Registers the package config and the CrudGenerator singleton, and wires the
+ * make-model / make-repository / make-service Artisan commands when running in
+ * the console.
+ */
 class CrudGeneratorServiceProvider extends ServiceProvider
 {
+    /**
+     * Register package services and configuration.
+     *
+     * @return void
+     */
     public function register(): void
     {
         // Merge package config so the host app always has defaults.
@@ -20,6 +32,11 @@ class CrudGeneratorServiceProvider extends ServiceProvider
         $this->app->singleton(CrudGenerator::class, fn() => new CrudGenerator());
     }
 
+    /**
+     * Bootstrap config publishing and register console commands.
+     *
+     * @return void
+     */
     public function boot(): void
     {
         // Make config publishable into the host app.
@@ -33,7 +50,6 @@ class CrudGeneratorServiceProvider extends ServiceProvider
         // $this->loadViewsFrom(__DIR__ . '/../resources/views', 'toolkit');
 
         if ($this->app->runningInConsole()) {
-            // $this->commands([\Personal\Toolkit\Commands\DoThing::class]);
             $this->commands([
                 ModelGenerator::class,
                 RepositoryGenerator::class,

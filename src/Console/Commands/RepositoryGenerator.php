@@ -7,6 +7,9 @@ use Illuminate\Support\Str;
 use Zola\CrudGenerator\CrudGenerator;
 use Zola\CrudGenerator\Enums\GeneratorType;
 
+/**
+ * Console command that generates a repository (and its model, if missing).
+ */
 class RepositoryGenerator extends Command
 {
     protected $signature = 'zola:make-repository
@@ -16,11 +19,23 @@ class RepositoryGenerator extends Command
 
     protected $description = 'Create new repository based on model';
 
+    /**
+     * Resolve the model name the repository should bind to.
+     *
+     * @param  string       $repoName   The repository name argument.
+     * @param  string|null  $modelName  The explicit model name, when provided.
+     * @return string The studly-cased model name.
+     */
     protected function resolveModelName(string $repoName, ?string $modelName): string
     {
         return !$modelName ? ucfirst($repoName) : ucfirst($modelName);
     }
 
+    /**
+     * Execute the console command.
+     *
+     * @return int The command exit code (self::SUCCESS or self::FAILURE).
+     */
     public function handle(): int
     {
         $repo = $this->argument('repoName');

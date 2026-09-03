@@ -35,10 +35,15 @@ use Illuminate\Database\Eloquent\Model;
  */
 abstract class BaseRepository
 {
+    /**
+     * @param  Model  $model  The Eloquent model this repository wraps.
+     */
     public function __construct(protected Model $model) {}
 
     /**
      * Fresh query builder for the underlying model.
+     *
+     * @return Builder A new query builder scoped to the model.
      */
     protected function query(): Builder
     {
@@ -48,7 +53,9 @@ abstract class BaseRepository
     /**
      * Translate caller-supplied parameters into query constraints.
      *
-     * @param  array<string,mixed>  $params
+     * @param  Builder               $query   The query builder to constrain.
+     * @param  array<string,mixed>   $params  The supported parameter keys documented on the class.
+     * @return Builder The same builder, with the constraints applied.
      */
     protected function applyParams(Builder $query, array $params): Builder
     {
@@ -118,8 +125,9 @@ abstract class BaseRepository
      *   ['projectDeal' => null]                         → plain existence check
      *   ['projectDeal' => fn ($query) => $query->…]     → constrained existence check
      *
-     * @param  string|Closure(Builder): void|null  $value
-     * @return array{0:string,1:?Closure}
+     * @param  int|string                          $key    Array key: an int for a plain check, or the relation name.
+     * @param  string|Closure(Builder): void|null  $value  Relation name, constraint closure, or null.
+     * @return array{0:string,1:?Closure} A [relation, callback] pair.
      */
     protected function normalizeRelationConstraint(int|string $key, string|Closure|null $value): array
     {
@@ -133,7 +141,8 @@ abstract class BaseRepository
     /**
      * Fetch all matching records.
      *
-     * @param  array<string,mixed>  $params
+     * @param  array<string,mixed>  $params  The supported parameter keys documented on the class.
+     * @return Collection The matching models.
      */
     public function get(array $params = []): Collection
     {
@@ -143,7 +152,9 @@ abstract class BaseRepository
     /**
      * Fetch a paginated slice of matching records.
      *
-     * @param  array<string,mixed>  $params
+     * @param  array<string,mixed>  $params   The supported parameter keys documented on the class.
+     * @param  int                  $perPage  Number of records per page.
+     * @return LengthAwarePaginator The paginated result set.
      */
     public function paginate(array $params = [], int $perPage = 15): LengthAwarePaginator
     {
@@ -153,13 +164,20 @@ abstract class BaseRepository
     /**
      * Fetch the first matching record, or null.
      *
-     * @param  array<string,mixed>  $params
+     * @param  array<string,mixed>  $params  The supported parameter keys documented on the class.
+     * @return Model|null The first matching model, or null when none match.
      */
     public function show(array $params = []): ?Model
     {
         return $this->applyParams($this->query(), $params)->first();
     }
 
+    /**
+     * Find a record by its primary key.
+     *
+     * @param  string  $id  The primary key value.
+     * @return Model|null The matching model, or null when not found.
+     */
     public function findById(string $id): ?Model
     {
         return $this->show([
@@ -172,7 +190,8 @@ abstract class BaseRepository
     /**
      * Persist a new record.
      *
-     * @param  array<string,mixed>  $attributes
+     * @param  array<string,mixed>  $attributes  The attributes to create the record with.
+     * @return Model The newly created model.
      */
     public function store(array $attributes): Model
     {
@@ -182,7 +201,9 @@ abstract class BaseRepository
     /**
      * Fill and persist an existing model.
      *
-     * @param  array<string,mixed>  $attributes
+     * @param  Model                $model       The model to update.
+     * @param  array<string,mixed>  $attributes  The attributes to fill before saving.
+     * @return Model The saved model.
      */
     public function update(Model $model, array $attributes): Model
     {
@@ -193,6 +214,9 @@ abstract class BaseRepository
 
     /**
      * Persist pending changes on a model instance.
+     *
+     * @param  Model  $model  The model to save.
+     * @return Model The saved model.
      */
     public function save(Model $model): Model
     {
@@ -203,6 +227,9 @@ abstract class BaseRepository
 
     /**
      * Delete a model instance.
+     *
+     * @param  Model  $model  The model to delete.
+     * @return bool True when the record was deleted.
      */
     public function delete(Model $model): bool
     {
@@ -212,7 +239,8 @@ abstract class BaseRepository
     /**
      * Find a matching record or return a fresh (unsaved) instance.
      *
-     * @param  array<string,mixed>  $attributes
+     * @param  array<string,mixed>  $attributes  The attributes to match or seed the new instance with.
+     * @return Model The existing or newly instantiated model.
      */
     public function firstOrNew(array $attributes): Model
     {

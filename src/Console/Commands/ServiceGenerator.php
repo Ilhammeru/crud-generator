@@ -7,6 +7,10 @@ use Illuminate\Support\Str;
 use Zola\CrudGenerator\CrudGenerator;
 use Zola\CrudGenerator\Enums\GeneratorType;
 
+/**
+ * Console command that generates a service, together with its repository and
+ * model when those do not already exist.
+ */
 class ServiceGenerator extends Command
 {
     protected $signature = 'zola:make-service
@@ -17,11 +21,21 @@ class ServiceGenerator extends Command
 
     protected $description = "Create new service file";
 
+    /**
+     * Resolve the shared CrudGenerator instance from the container.
+     *
+     * @return \Zola\CrudGenerator\CrudGenerator
+     */
     protected function mainService()
     {
         return app(CrudGenerator::class);
     }
 
+    /**
+     * Execute the console command.
+     *
+     * @return int The command exit code (self::SUCCESS or self::FAILURE).
+     */
     public function handle(): int
     {
         $name = $this->argument('serviceName');
@@ -62,11 +76,26 @@ class ServiceGenerator extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Resolve the model name the service should use.
+     *
+     * @param  string       $serviceName  The service name argument.
+     * @param  string|null  $modelName    The explicit model name, when provided.
+     * @return string The resolved model name.
+     */
     protected function resolveModelName(string $serviceName, ?string $modelName): string
     {
         return $modelName ? $modelName : $serviceName;
     }
 
+    /**
+     * Ensure the model exists, generating it when missing.
+     *
+     * @param  string       $serviceName  The service name argument.
+     * @param  string|null  $modelName    The --model option value, when provided.
+     * @param  string|null  $moduleName   The module name, when in module mode.
+     * @return string The resolved model name.
+     */
     protected function checkModel(string $serviceName, ?string $modelName, ?string $moduleName): string
     {
         $fixModelName = $this->resolveModelName($serviceName, $modelName);
@@ -79,6 +108,15 @@ class ServiceGenerator extends Command
         return $fixModelName;
     }
 
+    /**
+     * Ensure the repository exists, generating it when requested and missing.
+     *
+     * @param  bool         $isWithRepo   Whether a repository should be generated.
+     * @param  string       $serviceName  The service name argument.
+     * @param  string       $modelName    The resolved model name.
+     * @param  string|null  $moduleName   The module name, when in module mode.
+     * @return array{0:string,1:string} A [repositoryNamespace, repositoryName] pair.
+     */
     protected function checkRepository(bool $isWithRepo, string $serviceName, string $modelName, ?string $moduleName)
     {
         $fixModelName = $this->resolveModelName($serviceName, $modelName) . "Repository";
