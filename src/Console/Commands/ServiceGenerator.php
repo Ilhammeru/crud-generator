@@ -3,6 +3,7 @@
 namespace Zola\CrudGenerator\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 use Zola\CrudGenerator\CrudGenerator;
 use Zola\CrudGenerator\Enums\GeneratorType;
 
@@ -21,7 +22,7 @@ class ServiceGenerator extends Command
         return app(CrudGenerator::class);
     }
 
-    public function handle()
+    public function handle(): int
     {
         $name = $this->argument('serviceName');
         $moduleName = $this->argument('moduleName');
@@ -36,7 +37,7 @@ class ServiceGenerator extends Command
 
         // Create service
         $namespace = $this->mainService()->getNamespace(GeneratorType::Service, $moduleName);
-        $filename = \Illuminate\Support\Str::contains($name, 'Service') ? $name : "{$name}Service";
+        $filename = Str::contains($name, 'Service') ? $name : "{$name}Service";
 
         $stub = file_get_contents($this->mainService()->packagePath('stubs/ZolaService.stub'));
         $replacer = str_replace(
@@ -52,10 +53,13 @@ class ServiceGenerator extends Command
             file_put_contents("{$dir}/{$filename}.php", $replacer);
         } catch (\Throwable $th) {
             $this->error('Failed to create Service');
-            exit();
+
+            return self::FAILURE;
         }
 
         $this->info('Success create service');
+
+        return self::SUCCESS;
     }
 
     protected function resolveModelName(string $serviceName, ?string $modelName): string
@@ -64,7 +68,6 @@ class ServiceGenerator extends Command
     }
 
     protected function checkModel(string $serviceName, ?string $modelName, ?string $moduleName): string
-
     {
         $fixModelName = $this->resolveModelName($serviceName, $modelName);
 

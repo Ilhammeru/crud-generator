@@ -24,7 +24,7 @@ class CrudGenerator
 
     public function getNamespace(\Zola\CrudGenerator\Enums\GeneratorType $type, ?string $moduleName): string
     {
-        return $this->isModuleEnabled() ? "Modules\\{$moduleName}\{$type->value}" : "App\\{$type->value}";
+        return $this->isModuleEnabled() ? "Modules\\{$moduleName}\\{$type->value}" : "App\\{$type->value}";
     }
 
     public function getTargetDir(\Zola\CrudGenerator\Enums\GeneratorType $type, ?string $moduleName): string

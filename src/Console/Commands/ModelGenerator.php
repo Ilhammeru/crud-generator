@@ -3,6 +3,7 @@
 namespace Zola\CrudGenerator\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 use Zola\CrudGenerator\CrudGenerator;
 use Zola\CrudGenerator\Enums\GeneratorType;
 
@@ -12,19 +13,21 @@ class ModelGenerator extends Command
 
     protected $description = "Create model for zola crud generator";
 
-    public function handle()
+    public function handle(): int
     {
         $name = $this->argument('model');
         $moduleName = $this->argument('moduleName');
 
         if (config('crud-generator.is_laravel_module') && !$moduleName) {
             $this->error('Module name is required when you define or use laravel module');
-            exit();
+
+            return self::FAILURE;
         }
 
-        if ($name && (\Illuminate\Support\Str::contains($name, '-') || \Illuminate\Support\Str::contains($name, ' '))) {
+        if ($name && (Str::contains($name, '-') || Str::contains($name, ' '))) {
             $this->error('Only camel case allowed for model name');
-            exit();
+
+            return self::FAILURE;
         }
 
         $mainService = new CrudGenerator();
@@ -45,9 +48,12 @@ class ModelGenerator extends Command
             file_put_contents("{$dir}/{$name}.php", $replacer);
         } catch (\Throwable $th) {
             $this->error('Failed to create Model');
-            exit();
+
+            return self::FAILURE;
         }
 
         $this->info('Success create model');
+
+        return self::SUCCESS;
     }
 }

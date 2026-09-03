@@ -12,12 +12,12 @@ class CrudGeneratorServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Merge package config so the host app always has defaults.
-        $this->mergeConfigFrom(__DIR__ . '/../config/crud-generator.php', 'toolkit');
+        // The config key MUST match the file name ('crud-generator') so that
+        // config('crud-generator.*') resolves in the host app.
+        $this->mergeConfigFrom(__DIR__ . '/../config/crud-generator.php', 'crud-generator');
 
         // Bind your main class into the container.
-        $this->app->singleton(CrudGenerator::class, fn() => new CrudGenerator(
-            config('crud-generator.enabled', true),
-        ));
+        $this->app->singleton(CrudGenerator::class, fn() => new CrudGenerator());
     }
 
     public function boot(): void
