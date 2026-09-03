@@ -1,0 +1,14 @@
+<?php
+
+namespace {{NAMESPACE}};
+
+use {{BASEREPOSITORYCLASS}};
+use {{MODELCLASS}};
+
+class {{CLASSNAME}} extends BaseRepository
+{
+    public function __construct({{MODELNAME}} $model)
+    {
+        return parent::__construct($model);
+    }
+}

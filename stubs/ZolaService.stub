@@ -1,0 +1,12 @@
+<?php
+
+namespace {{NAMESPACE}};
+
+use {{REPOSITORYNAMESPACE}};
+
+class {{SERVICENAME}}
+{
+    public function __construct(
+        private readonly {{REPOSITORYNAME}} $repo
+    ) {}
+}
