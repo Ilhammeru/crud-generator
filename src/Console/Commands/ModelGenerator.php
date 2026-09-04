@@ -6,13 +6,14 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 use Zola\CrudGenerator\CrudGenerator;
 use Zola\CrudGenerator\Enums\GeneratorType;
+use Zola\CrudGenerator\Support\Fields;
 
 /**
  * Console command that generates an Eloquent model from the package stub.
  */
 class ModelGenerator extends Command
 {
-    protected $signature = 'zola:make-model {model} {moduleName?}';
+    protected $signature = 'zola:make-model {model} {moduleName?} {--fields= : Compact field list, e.g. "name:string, price:decimal:nullable"}';
 
     protected $description = "Create model for zola crud generator";
 
@@ -38,23 +39,33 @@ class ModelGenerator extends Command
             return self::FAILURE;
         }
 
-        $mainService = new CrudGenerator();
+        $mainService = app(CrudGenerator::class);
 
         $namespace = $mainService->getNamespace(GeneratorType::Model, $moduleName ?? null);
 
+        $fields = Fields::parse($this->option('fields'));
+
+        $fillableItems = array_map(fn ($f) => "'{$f['name']}'", $fields);
+
+        $castItems = [];
+        foreach ($fields as $field) {
+            $cast = Fields::cast($field['type']);
+            if ($cast !== null) {
+                $castItems[] = "'{$field['name']}' => '{$cast}'";
+            }
+        }
+
         $stub = file_get_contents($mainService->packagePath('stubs/ZolaModel.stub'));
         $replacer = str_replace(
-            ['{{NAMESPACE}}', '{{CLASSNAME}}'],
-            [$namespace, $name],
+            ['{{NAMESPACE}}', '{{CLASSNAME}}', '{{FILLABLE}}', '{{CASTS}}'],
+            [$namespace, $name, Fields::renderList($fillableItems), Fields::renderList($castItems)],
             $stub
         );
 
         // put file to target dir
         $dir = $mainService->checkDir(GeneratorType::Model, $moduleName);
 
-        try {
-            file_put_contents("{$dir}/{$name}.php", $replacer);
-        } catch (\Throwable $th) {
+        if (! $mainService->writeGeneratedFile("{$dir}/{$name}.php", $replacer)) {
             $this->error('Failed to create Model');
 
             return self::FAILURE;

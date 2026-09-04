@@ -54,19 +54,34 @@ class ControllerGenerator extends Command
 
         [$serviceNamespace, $serviceName] = $this->service->createServiceIfNotExists($service ?? $name, $modelName, $moduleName);
 
+        // Ensure the Store/Update Data classes the controller type-hints exist.
+        $this->service->createDataIfNotExists($modelName, $moduleName);
+
+        $dataNamespace = $this->service->getNamespace(GeneratorType::Data, $moduleName);
+        $storeDataName = "Store{$modelName}Data";
+        $updateDataName = "Update{$modelName}Data";
+
         $stub = file_get_contents($this->service->packagePath('stubs/ZolaController.stub'));
         $replacer = str_replace(
-            ["{{NAMESPACE}}", "{{SERVICENAMESPACE}}", "{{CLASSNAME}}", "{{SERVICENAME}}"],
-            [$controllerNamespace, $serviceNamespace, $controllerName, $serviceName],
+            [
+                "{{NAMESPACE}}", "{{SERVICENAMESPACE}}", "{{CLASSNAME}}", "{{SERVICENAME}}",
+                "{{MODELNAMESPACE}}", "{{MODELNAME}}", "{{MODELVARIABLE}}",
+                "{{STOREDATANAMESPACE}}", "{{STOREDATANAME}}",
+                "{{UPDATEDATANAMESPACE}}", "{{UPDATEDATANAME}}",
+            ],
+            [
+                $controllerNamespace, $serviceNamespace, $controllerName, $serviceName,
+                "{$modelNamespace}\\{$modelName}", $modelName, lcfirst($modelName),
+                "{$dataNamespace}\\{$storeDataName}", $storeDataName,
+                "{$dataNamespace}\\{$updateDataName}", $updateDataName,
+            ],
             $stub
         );
 
         // put file to target dir
         $dir = $this->service->checkDir(GeneratorType::Controller, $moduleName);
 
-        try {
-            file_put_contents("{$dir}/{$filename}.php", $replacer);
-        } catch (\Throwable $th) {
+        if (! $this->service->writeGeneratedFile("{$dir}/{$filename}.php", $replacer)) {
             $this->error('Failed to create controller');
 
             return self::FAILURE;

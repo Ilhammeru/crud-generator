@@ -15,6 +15,16 @@ use Zola\CrudGenerator\Enums\GeneratorType;
 class CrudGenerator
 {
     /**
+     * Paths created during the current generation run, newest last.
+     *
+     * Only files that did not already exist are tracked, so a rollback never
+     * deletes a file the user already had and a generator merely overwrote.
+     *
+     * @var array<int, string>
+     */
+    private array $generatedFiles = [];
+
+    /**
      * Smoke-test helper returning the host application base path.
      *
      * @return string The absolute base path of the host Laravel application.
@@ -22,6 +32,57 @@ class CrudGenerator
     public function test()
     {
         return base_path();
+    }
+
+    /**
+     * Write a generated file and, when it is newly created, track it for rollback.
+     *
+     * @param  string  $path     Absolute or working-directory-relative file path.
+     * @param  string  $contents File contents to write.
+     * @return bool True on success, false when the write failed.
+     */
+    public function writeGeneratedFile(string $path, string $contents): bool
+    {
+        $isNew = ! is_file($path);
+
+        if (@file_put_contents($path, $contents) === false) {
+            return false;
+        }
+
+        if ($isNew) {
+            $this->generatedFiles[] = $path;
+        }
+
+        return true;
+    }
+
+    /**
+     * Forget any tracked files, starting a fresh generation run.
+     *
+     * @return void
+     */
+    public function resetGeneratedFiles(): void
+    {
+        $this->generatedFiles = [];
+    }
+
+    /**
+     * Delete the files created during this run (newest first) and stop tracking.
+     *
+     * @return array<int, string> The paths that were removed.
+     */
+    public function rollbackGeneratedFiles(): array
+    {
+        $removed = [];
+        foreach (array_reverse($this->generatedFiles) as $path) {
+            if (is_file($path) && @unlink($path)) {
+                $removed[] = $path;
+            }
+        }
+
+        $this->generatedFiles = [];
+
+        return $removed;
     }
 
     /**
@@ -86,7 +147,8 @@ class CrudGenerator
         if (!is_dir($dir)) {
             // Recursive: in module mode the target sits several levels deep
             // (e.g. "Modules/Blog/app/Repositories") and the parents may not exist yet.
-            mkdir($dir, 0777, true);
+            // Suppressed: a failure surfaces as a write failure the caller handles.
+            @mkdir($dir, 0777, true);
         }
 
         return $dir;
@@ -102,8 +164,38 @@ class CrudGenerator
      */
     public function checkClassExistance(GeneratorType $type, string $name, ?string $moduleName = null): bool
     {
-        $namespace = $this->getNamespace($type, $moduleName);
-        return class_exists($namespace . "\\{$name}");
+        // Check the target file first. class_exists() would autoload the class,
+        // and autoloading can fail hard: a freshly generated class may extend a
+        // vendor class that is not installed yet, or a stale optimized/authoritative
+        // Composer classmap may point at a file that was removed. Either one raises
+        // an error instead of answering the question, so the file check comes first.
+        if (is_file($this->getTargetDir($type, $moduleName) . "/{$name}.php")) {
+            return true;
+        }
+
+        try {
+            return class_exists($this->getNamespace($type, $moduleName) . "\\{$name}");
+        } catch (\Throwable $e) {
+            // Autoloading blew up (missing dependency or stale classmap). Treat the
+            // class as absent so generation proceeds instead of aborting the run.
+            return false;
+        }
+    }
+
+    /**
+     * Build the migrations directory for the current mode, relative to the working directory.
+     *
+     * Migrations are not namespaced classes, so they live under database/migrations
+     * (app mode) or Modules/{module}/database/migrations (module mode) rather than app/.
+     *
+     * @param  string|null  $moduleName  Module name; used only in module mode.
+     * @return string The migrations directory.
+     */
+    public function migrationDir(?string $moduleName): string
+    {
+        return $this->isModuleEnabled()
+            ? "Modules/{$moduleName}/database/migrations"
+            : "database/migrations";
     }
 
     /**
@@ -237,6 +329,37 @@ class CrudGenerator
         if ($moduleName) $createService .= " {$moduleName}";
         if ($modelName) $createService .= " --model={$modelName}";
         Artisan::call($createService);
+    }
+
+    /**
+     * Ensure the Store/Update Data classes exist for a model.
+     *
+     * The generated services and controllers type-hint these classes, so they
+     * are treated as a dependency of those layers and scaffolded when missing.
+     *
+     * @param  string       $modelName   Model name the Data classes are for.
+     * @param  string|null  $moduleName  Module name; used only in module mode.
+     * @return void
+     */
+    public function createDataIfNotExists(string $modelName, ?string $moduleName): void
+    {
+        if (! $this->checkClassExistance(GeneratorType::Data, "Store{$modelName}Data", $moduleName)) {
+            $this->createDataFromCommand($modelName, $moduleName);
+        }
+    }
+
+    /**
+     * Generate the Data classes by delegating to the make-data command.
+     *
+     * @param  string       $modelName   Model name the Data classes are for.
+     * @param  string|null  $moduleName  Module name, appended when in module mode.
+     * @return void
+     */
+    public function createDataFromCommand(string $modelName, ?string $moduleName): void
+    {
+        $createData = "zola:make-data {$modelName}";
+        if ($moduleName) $createData .= " {$moduleName}";
+        Artisan::call($createData);
     }
 
     /**

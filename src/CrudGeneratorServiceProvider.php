@@ -5,6 +5,8 @@ namespace Zola\CrudGenerator;
 use Illuminate\Support\ServiceProvider;
 use Zola\CrudGenerator\Console\Commands\ControllerGenerator;
 use Zola\CrudGenerator\Console\Commands\CrudGenerator;
+use Zola\CrudGenerator\Console\Commands\DataGenerator;
+use Zola\CrudGenerator\Console\Commands\MigrationGenerator;
 use Zola\CrudGenerator\Console\Commands\ModelGenerator;
 use Zola\CrudGenerator\Console\Commands\RepositoryGenerator;
 use Zola\CrudGenerator\Console\Commands\ServiceGenerator;
@@ -30,8 +32,14 @@ class CrudGeneratorServiceProvider extends ServiceProvider
         // config('crud-generator.*') resolves in the host app.
         $this->mergeConfigFrom(__DIR__ . '/../config/crud-generator.php', 'crud-generator');
 
-        // Bind your main class into the container.
-        $this->app->singleton(CrudGenerator::class, fn() => new CrudGenerator());
+        // Bind the shared helper as a singleton. Note: the imported CrudGenerator
+        // in this file is the console command, so the helper must be referenced by
+        // its fully-qualified name here, otherwise every resolve returns a fresh
+        // instance and per-run state (such as the generated-file registry) is lost.
+        $this->app->singleton(
+            \Zola\CrudGenerator\CrudGenerator::class,
+            fn () => new \Zola\CrudGenerator\CrudGenerator()
+        );
     }
 
     /**
@@ -57,7 +65,9 @@ class CrudGeneratorServiceProvider extends ServiceProvider
                 RepositoryGenerator::class,
                 ServiceGenerator::class,
                 CrudGenerator::class,
-                ControllerGenerator::class
+                ControllerGenerator::class,
+                MigrationGenerator::class,
+                DataGenerator::class,
             ]);
         }
     }

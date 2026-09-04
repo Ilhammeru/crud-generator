@@ -3,7 +3,11 @@
 namespace {{NAMESPACE}};
 
 use App\Http\Controllers\Controller;
+use {{MODELNAMESPACE}};
 use {{SERVICENAMESPACE}};
+use {{STOREDATANAMESPACE}};
+use {{UPDATEDATANAMESPACE}};
+use Illuminate\Http\JsonResponse;
 
 class {{CLASSNAME}} extends Controller
 {
@@ -11,18 +15,25 @@ class {{CLASSNAME}} extends Controller
         private readonly {{SERVICENAME}} $service
     ) {}
 
-    public function index()
+    public function index(): JsonResponse
     {
-        //
+        return response()->json($this->service->list());
     }
 
-    public function store()
+    public function store({{STOREDATANAME}} $data): JsonResponse
     {
-        //
+        return response()->json($this->service->store($data), 201);
     }
 
-    public function update()
+    public function update({{UPDATEDATANAME}} $data, {{MODELNAME}} ${{MODELVARIABLE}}): JsonResponse
     {
-        //
+        return response()->json($this->service->update(${{MODELVARIABLE}}, $data));
+    }
+
+    public function destroy({{MODELNAME}} ${{MODELVARIABLE}}): JsonResponse
+    {
+        $this->service->delete(${{MODELVARIABLE}});
+
+        return response()->json(null, 204);
     }
 }

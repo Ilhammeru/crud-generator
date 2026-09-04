@@ -42,7 +42,7 @@ class RepositoryGenerator extends Command
         $modelName = $this->argument('modelName');
         $moduleName = $this->argument('moduleName');
 
-        $mainService = new CrudGenerator();
+        $mainService = app(CrudGenerator::class);
 
         $fixModelName = $this->resolveModelName($repo, $modelName);
 
@@ -70,9 +70,7 @@ class RepositoryGenerator extends Command
         // put file to target dir
         $dir = $mainService->checkDir(GeneratorType::Repository, $moduleName);
 
-        try {
-            file_put_contents("{$dir}/{$filename}.php", $replacer);
-        } catch (\Throwable $th) {
+        if (! $mainService->writeGeneratedFile("{$dir}/{$filename}.php", $replacer)) {
             $this->error('Failed to create Repository');
 
             return self::FAILURE;

@@ -2,11 +2,35 @@
 
 namespace {{NAMESPACE}};
 
+use {{MODELNAMESPACE}};
 use {{REPOSITORYNAMESPACE}};
+use {{STOREDATANAMESPACE}};
+use {{UPDATEDATANAMESPACE}};
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class {{SERVICENAME}}
 {
     public function __construct(
         private readonly {{REPOSITORYNAME}} $repo
     ) {}
+
+    public function list(): LengthAwarePaginator
+    {
+        return $this->repo->paginate();
+    }
+
+    public function store({{STOREDATANAME}} $data): {{MODELNAME}}
+    {
+        return $this->repo->store($data->toArray());
+    }
+
+    public function update({{MODELNAME}} $model, {{UPDATEDATANAME}} $data): {{MODELNAME}}
+    {
+        return $this->repo->update($model, $data->toArray());
+    }
+
+    public function delete({{MODELNAME}} $model): bool
+    {
+        return $this->repo->delete($model);
+    }
 }

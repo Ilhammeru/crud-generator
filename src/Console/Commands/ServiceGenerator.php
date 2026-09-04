@@ -56,23 +56,38 @@ class ServiceGenerator extends Command
         // Handle repository
         [$repositoryNamespace, $repositoryName] = $this->service->createRepositoryIfNotExists($withRepository, $name, $modelName, $moduleName);
 
+        // Ensure the Store/Update Data classes the service type-hints exist.
+        $this->service->createDataIfNotExists($modelName, $moduleName);
+
         // Create service
         $namespace = $this->service->getNamespace(GeneratorType::Service, $moduleName);
         $filename = Str::contains($name, 'Service') ? $name : "{$name}Service";
 
+        $dataNamespace = $this->service->getNamespace(GeneratorType::Data, $moduleName);
+        $storeDataName = "Store{$modelName}Data";
+        $updateDataName = "Update{$modelName}Data";
+
         $stub = file_get_contents($this->service->packagePath('stubs/ZolaService.stub'));
         $replacer = str_replace(
-            ["{{NAMESPACE}}", "{{REPOSITORYNAMESPACE}}", "{{SERVICENAME}}", "{{REPOSITORYNAME}}"],
-            [$namespace, $repositoryNamespace . "\\{$repositoryName}", $filename, $repositoryName],
+            [
+                "{{NAMESPACE}}", "{{REPOSITORYNAMESPACE}}", "{{SERVICENAME}}", "{{REPOSITORYNAME}}",
+                "{{MODELNAMESPACE}}", "{{MODELNAME}}",
+                "{{STOREDATANAMESPACE}}", "{{STOREDATANAME}}",
+                "{{UPDATEDATANAMESPACE}}", "{{UPDATEDATANAME}}",
+            ],
+            [
+                $namespace, $repositoryNamespace . "\\{$repositoryName}", $filename, $repositoryName,
+                "{$modelNamespace}\\{$modelName}", $modelName,
+                "{$dataNamespace}\\{$storeDataName}", $storeDataName,
+                "{$dataNamespace}\\{$updateDataName}", $updateDataName,
+            ],
             $stub
         );
 
         // put file to target dir
         $dir = $this->service->checkDir(GeneratorType::Service, $moduleName);
 
-        try {
-            file_put_contents("{$dir}/{$filename}.php", $replacer);
-        } catch (\Throwable $th) {
+        if (! $this->service->writeGeneratedFile("{$dir}/{$filename}.php", $replacer)) {
             $this->error('Failed to create Service');
 
             return self::FAILURE;

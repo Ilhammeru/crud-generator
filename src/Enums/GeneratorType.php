@@ -15,4 +15,5 @@ enum GeneratorType: string
     case Repository = 'Repositories';
     case Service = 'Services';
     case Controller = 'Controllers';
+    case Data = 'Data';
 }
