@@ -91,3 +91,20 @@ it('does not append a duplicate "Repository" suffix', function () {
     expect(is_file("{$this->workdir}/app/Repositories/ProductRepository.php"))->toBeTrue()
         ->and(is_file("{$this->workdir}/app/Repositories/ProductRepositoryRepository.php"))->toBeFalse();
 });
+
+it('generates into a nested module path in module mode', function () {
+    // No parent directories are pre-created here: this exercises checkDir()'s
+    // recursive mkdir for the multi-level "Modules/{module}/app/..." path.
+    config()->set('crud-generator.is_laravel_module', true);
+
+    $exit = Artisan::call('zola:make-model', ['model' => 'Product', 'moduleName' => 'Blog']);
+
+    $path = "{$this->workdir}/Modules/Blog/app/Models/Product.php";
+
+    expect($exit)->toBe(0)
+        ->and(is_file($path))->toBeTrue();
+
+    expect(file_get_contents($path))
+        ->toContain('namespace Modules\\Blog\\Models;')
+        ->toContain('class Product extends Model');
+});

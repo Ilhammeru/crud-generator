@@ -13,6 +13,8 @@ use Zola\CrudGenerator\Enums\GeneratorType;
  */
 class ServiceGenerator extends Command
 {
+    private CrudGenerator $service;
+
     protected $signature = 'zola:make-service
     {serviceName : Represent service name}
     {moduleName? : Define module name if using laravel module}
@@ -20,61 +22,6 @@ class ServiceGenerator extends Command
     {--without-repository= : Leave it if you need to generate repository automatically}';
 
     protected $description = "Create new service file";
-
-    /**
-     * Resolve the shared CrudGenerator instance from the container.
-     *
-     * @return \Zola\CrudGenerator\CrudGenerator
-     */
-    protected function mainService()
-    {
-        return app(CrudGenerator::class);
-    }
-
-    /**
-     * Execute the console command.
-     *
-     * @return int The command exit code (self::SUCCESS or self::FAILURE).
-     */
-    public function handle(): int
-    {
-        $name = $this->argument('serviceName');
-        $moduleName = $this->argument('moduleName');
-        $model = $this->option('model');
-        $withRepository = $this->option('without-repository') ?? true; // true will create repository if not exists
-
-        // Handle model
-        $modelName = $this->checkModel($name, $model, $moduleName);
-
-        // Handle repository
-        [$repositoryNamespace, $repositoryName] = $this->checkRepository($withRepository, $name, $modelName, $moduleName);
-
-        // Create service
-        $namespace = $this->mainService()->getNamespace(GeneratorType::Service, $moduleName);
-        $filename = Str::contains($name, 'Service') ? $name : "{$name}Service";
-
-        $stub = file_get_contents($this->mainService()->packagePath('stubs/ZolaService.stub'));
-        $replacer = str_replace(
-            ["{{NAMESPACE}}", "{{REPOSITORYNAMESPACE}}", "{{SERVICENAME}}", "{{REPOSITORYNAME}}"],
-            [$namespace, $repositoryNamespace . "\\{$repositoryName}", $filename, $repositoryName],
-            $stub
-        );
-
-        // put file to target dir
-        $dir = $this->mainService()->checkDir(GeneratorType::Service, $moduleName);
-
-        try {
-            file_put_contents("{$dir}/{$filename}.php", $replacer);
-        } catch (\Throwable $th) {
-            $this->error('Failed to create Service');
-
-            return self::FAILURE;
-        }
-
-        $this->info('Success create service');
-
-        return self::SUCCESS;
-    }
 
     /**
      * Resolve the model name the service should use.
@@ -89,45 +36,50 @@ class ServiceGenerator extends Command
     }
 
     /**
-     * Ensure the model exists, generating it when missing.
+     * Execute the console command.
      *
-     * @param  string       $serviceName  The service name argument.
-     * @param  string|null  $modelName    The --model option value, when provided.
-     * @param  string|null  $moduleName   The module name, when in module mode.
-     * @return string The resolved model name.
+     * @return int The command exit code (self::SUCCESS or self::FAILURE).
      */
-    protected function checkModel(string $serviceName, ?string $modelName, ?string $moduleName): string
+    public function handle(): int
     {
-        $fixModelName = $this->resolveModelName($serviceName, $modelName);
+        // Define service
+        $this->service = app(CrudGenerator::class);
 
-        if (! $this->mainService()->checkClassExistance(GeneratorType::Model, $fixModelName)) {
-            // Create model
-            $this->mainService()->createModelFromCommand($fixModelName, $moduleName);
+        $name = $this->argument('serviceName');
+        $moduleName = $this->argument('moduleName');
+        $model = $this->option('model');
+        $withRepository = $this->option('without-repository') ?? true; // true will create repository if not exists
+
+        // Handle model
+        [$modelNamespace, $modelName] = $this->service->createModelIfNotExists($this->resolveModelName($name, $model), $moduleName);
+
+        // Handle repository
+        [$repositoryNamespace, $repositoryName] = $this->service->createRepositoryIfNotExists($withRepository, $name, $modelName, $moduleName);
+
+        // Create service
+        $namespace = $this->service->getNamespace(GeneratorType::Service, $moduleName);
+        $filename = Str::contains($name, 'Service') ? $name : "{$name}Service";
+
+        $stub = file_get_contents($this->service->packagePath('stubs/ZolaService.stub'));
+        $replacer = str_replace(
+            ["{{NAMESPACE}}", "{{REPOSITORYNAMESPACE}}", "{{SERVICENAME}}", "{{REPOSITORYNAME}}"],
+            [$namespace, $repositoryNamespace . "\\{$repositoryName}", $filename, $repositoryName],
+            $stub
+        );
+
+        // put file to target dir
+        $dir = $this->service->checkDir(GeneratorType::Service, $moduleName);
+
+        try {
+            file_put_contents("{$dir}/{$filename}.php", $replacer);
+        } catch (\Throwable $th) {
+            $this->error('Failed to create Service');
+
+            return self::FAILURE;
         }
 
-        return $fixModelName;
-    }
+        $this->info('Success create service');
 
-    /**
-     * Ensure the repository exists, generating it when requested and missing.
-     *
-     * @param  bool         $isWithRepo   Whether a repository should be generated.
-     * @param  string       $serviceName  The service name argument.
-     * @param  string       $modelName    The resolved model name.
-     * @param  string|null  $moduleName   The module name, when in module mode.
-     * @return array{0:string,1:string} A [repositoryNamespace, repositoryName] pair.
-     */
-    protected function checkRepository(bool $isWithRepo, string $serviceName, string $modelName, ?string $moduleName)
-    {
-        $fixModelName = $this->resolveModelName($serviceName, $modelName) . "Repository";
-
-        if ($isWithRepo && ! $this->mainService()->checkClassExistance(GeneratorType::Model, $fixModelName)) {
-            // Create repository
-            $this->mainService()->crateRepositoryFromCommand($fixModelName, $modelName, $moduleName);
-        }
-
-        $repoNamespace = $this->mainService()->getNamespace(GeneratorType::Repository, $moduleName);
-
-        return [$repoNamespace, $fixModelName];
+        return self::SUCCESS;
     }
 }

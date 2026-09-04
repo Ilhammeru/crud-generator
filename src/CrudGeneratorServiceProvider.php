@@ -3,6 +3,8 @@
 namespace Zola\CrudGenerator;
 
 use Illuminate\Support\ServiceProvider;
+use Zola\CrudGenerator\Console\Commands\ControllerGenerator;
+use Zola\CrudGenerator\Console\Commands\CrudGenerator;
 use Zola\CrudGenerator\Console\Commands\ModelGenerator;
 use Zola\CrudGenerator\Console\Commands\RepositoryGenerator;
 use Zola\CrudGenerator\Console\Commands\ServiceGenerator;
@@ -53,7 +55,9 @@ class CrudGeneratorServiceProvider extends ServiceProvider
             $this->commands([
                 ModelGenerator::class,
                 RepositoryGenerator::class,
-                ServiceGenerator::class
+                ServiceGenerator::class,
+                CrudGenerator::class,
+                ControllerGenerator::class
             ]);
         }
     }

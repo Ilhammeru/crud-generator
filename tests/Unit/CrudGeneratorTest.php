@@ -100,4 +100,16 @@ describe('checkClassExistance()', function () {
         expect($this->generator->checkClassExistance(GeneratorType::Model, 'AliasedDummyModel'))
             ->toBeTrue();
     });
+
+    it('resolves against the module namespace in module mode', function () {
+        config()->set('crud-generator.is_laravel_module', true);
+
+        // The class lives under the module namespace, keyed by the module name (not the class name).
+        class_alias(CrudGenerator::class, 'Modules\\Blog\\Models\\AliasedModuleModel');
+
+        expect($this->generator->checkClassExistance(GeneratorType::Model, 'AliasedModuleModel', 'Blog'))
+            ->toBeTrue()
+            ->and($this->generator->checkClassExistance(GeneratorType::Model, 'AliasedModuleModel', 'WrongModule'))
+            ->toBeFalse();
+    });
 });

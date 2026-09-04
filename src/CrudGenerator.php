@@ -55,7 +55,9 @@ class CrudGenerator
      */
     public function getNamespace(\Zola\CrudGenerator\Enums\GeneratorType $type, ?string $moduleName): string
     {
-        return $this->isModuleEnabled() ? "Modules\\{$moduleName}\\{$type->value}" : "App\\{$type->value}";
+        // Controllers live under Http\Controllers to mirror the app/Http/Controllers directory.
+        $segment = $type === GeneratorType::Controller ? 'Http\\Controllers' : $type->value;
+        return $this->isModuleEnabled() ? "Modules\\{$moduleName}\\{$segment}" : "App\\{$segment}";
     }
 
     /**
@@ -67,7 +69,8 @@ class CrudGenerator
      */
     public function getTargetDir(\Zola\CrudGenerator\Enums\GeneratorType $type, ?string $moduleName): string
     {
-        return $this->isModuleEnabled() ? "Modules/{$moduleName}/app/{$type->value}" : "app/{$type->value}";
+        $lastPath = $type == GeneratorType::Controller ? 'Http/Controllers' : $type->value;
+        return $this->isModuleEnabled() ? "Modules/{$moduleName}/app/{$lastPath}" : "app/{$lastPath}";
     }
 
     /**
@@ -81,7 +84,9 @@ class CrudGenerator
     {
         $dir = $this->getTargetDir($type, $moduleName);
         if (!is_dir($dir)) {
-            mkdir($dir, 0777);
+            // Recursive: in module mode the target sits several levels deep
+            // (e.g. "Modules/Blog/app/Repositories") and the parents may not exist yet.
+            mkdir($dir, 0777, true);
         }
 
         return $dir;
@@ -90,14 +95,15 @@ class CrudGenerator
     /**
      * Determine whether a generated class already exists in the host app.
      *
-     * @param  \Zola\CrudGenerator\Enums\GeneratorType  $type  Kind of class to check for.
-     * @param  string                                   $name  Short class name, e.g. "Product".
+     * @param  \Zola\CrudGenerator\Enums\GeneratorType  $type        Kind of class to check for.
+     * @param  string                                   $name        Short class name, e.g. "Product".
+     * @param  string|null                              $moduleName  Module name; used only in module mode.
      * @return bool True when the fully-qualified class is autoloadable.
      */
-    public function checkClassExistance(GeneratorType $type, string $name)
+    public function checkClassExistance(GeneratorType $type, string $name, ?string $moduleName = null): bool
     {
-        $namespace = $this->getNamespace($type, $name);
-        return class_exists($namespace . "\\{$name}") ? true : false;
+        $namespace = $this->getNamespace($type, $moduleName);
+        return class_exists($namespace . "\\{$name}");
     }
 
     /**
@@ -110,6 +116,127 @@ class CrudGenerator
     public function getModelClassName(string $modelName, ?string $moduleName): string
     {
         return $this->isModuleEnabled() ? "Modules\\{$moduleName}\\Models\\{$modelName}" : "App\\Models\\{$modelName}";
+    }
+
+    /**
+     * Normalise a model name into its class/file name.
+     *
+     * @param  string  $name  Raw model name provided by the caller, e.g. "product".
+     * @return string The studly-cased model name, e.g. "Product".
+     */
+    public function defineModelFilename(string $name): string
+    {
+        return ucfirst($name);
+    }
+
+    public function defineControllerFilename(string $name): string
+    {
+        return \Illuminate\Support\Str::endsWith(strtolower($name), 'controller') ? ucfirst($name) : ucfirst($name) . 'Controller';
+    }
+
+    /**
+     * Normalise a service name into its class/file name.
+     *
+     * Appends a "Service" suffix unless one is already present (case-insensitive),
+     * so both "Product" and "ProductService" resolve to "ProductService".
+     *
+     * @param  string  $name  Raw service name provided by the caller.
+     * @return string The studly-cased service class name, always ending in "Service".
+     */
+    public function defineServiceFilename(string $name): string
+    {
+        $output = \Illuminate\Support\Str::endsWith(strtolower($name), 'service') ? ucfirst($name) : ucfirst($name) . 'Service';
+
+        // 'controller', 'model', 'repository' is forbidden here
+        if (\Illuminate\Support\Str::contains($name, 'Controller') || \Illuminate\Support\Str::contains($name, 'controller')) $output = str_replace(['controller', 'Controller'], '', $output);
+        if (\Illuminate\Support\Str::contains($name, 'Respository') || \Illuminate\Support\Str::contains($name, 'repository')) $output = str_replace(['Repository', 'repository'], '', $output);
+
+        return $output;
+    }
+
+    /**
+     * Normalise a repository name into its class/file name.
+     *
+     * Appends a "Repository" suffix unless one is already present (case-insensitive),
+     * so both "Product" and "ProductRepository" resolve to "ProductRepository".
+     *
+     * @param  string  $name  Raw repository name provided by the caller.
+     * @return string The studly-cased repository class name, always ending in "Repository".
+     */
+    public function defineRepositoryFilename(string $name): string
+    {
+        $output = \Illuminate\Support\Str::endsWith(strtolower($name), 'repository') ? ucfirst($name) : ucfirst($name) . 'Repository';
+
+        // If output contain 'service' word, remove it. 'service' or 'controller' is forbidden in repository name
+        if (\Illuminate\Support\Str::contains($output, 'service') || \Illuminate\Support\Str::contains($output, 'Service')) $output = str_replace(['service', 'Service'], '', $output);
+        if (\Illuminate\Support\Str::contains($output, 'controller') || \Illuminate\Support\Str::contains($output, 'Controller')) $output = str_replace(['controller', 'Controller'], '', $output);
+
+        return $output;
+    }
+
+    /**
+     * Ensure a model exists, generating it from the make-model command when missing.
+     *
+     * @param  string       $name        Raw model name to resolve and, if needed, create.
+     * @param  string|null  $moduleName  Module name; used only in module mode.
+     * @return array{0:string,1:string} A [modelNamespace, modelName] pair for the resolved model.
+     */
+    public function createModelIfNotExists(string $name, ?string $moduleName): array
+    {
+        $modelName = $this->defineModelFilename($name);
+
+        if (! $this->checkClassExistance(GeneratorType::Model, $modelName, $moduleName)) {
+            // Create model
+            $this->createModelFromCommand($modelName, $moduleName);
+        }
+
+        $modelNamespace = $this->getNamespace(GeneratorType::Model, $moduleName);
+
+        return [$modelNamespace, $modelName];
+    }
+
+    /**
+     * Ensure a repository exists, generating it from the make-repository command when missing.
+     *
+     * @param  string       $name        Raw repository name to resolve and, if needed, create.
+     * @param  string       $modelName   Model name the repository binds to.
+     * @param  string|null  $moduleName  Module name; used only in module mode.
+     * @return array{0:string,1:string} A [repositoryNamespace, repositoryName] pair for the resolved repository.
+     */
+    public function createRepositoryIfNotExists(bool $doCreateRepo, string $name, string $modelName, ?string $moduleName): array
+    {
+        $repositoryName = $this->defineRepositoryFilename($name);
+
+        if ($doCreateRepo && ! $this->checkClassExistance(GeneratorType::Repository, $repositoryName, $moduleName)) {
+            // Create repository
+            $this->crateRepositoryFromCommand($repositoryName, $modelName, $moduleName);
+        }
+
+        $repoNamespace = $this->getNamespace(GeneratorType::Repository, $moduleName);
+
+        return [$repoNamespace, $repositoryName];
+    }
+
+    public function createServiceIfNotExists(string $name, ?string $modelName, ?string $moduleName): array
+    {
+        $serviceName = $this->defineServiceFilename($name);
+
+        if (! $this->checkClassExistance(GeneratorType::Service, $serviceName, $moduleName)) {
+            // Create service
+            $this->createServiceFromCommand($serviceName, $modelName, $moduleName);
+        }
+
+        $serviceNamespace = $this->getNamespace(GeneratorType::Service, $moduleName) . "\\{$serviceName}";
+
+        return [$serviceNamespace, $serviceName];
+    }
+
+    public function createServiceFromCommand(string $serviceName, ?string $modelName, ?string $moduleName): void
+    {
+        $createService = "zola:make-service {$serviceName}";
+        if ($moduleName) $createService .= " {$moduleName}";
+        if ($modelName) $createService .= " --model={$modelName}";
+        Artisan::call($createService);
     }
 
     /**
@@ -141,7 +268,9 @@ class CrudGenerator
         Artisan::call($createRepo);
 
         $namespace = $this->getNamespace(GeneratorType::Repository, $moduleName);
-        $repoName = "{$name}Repository";
+        // Idempotent: $name may already end in "Repository", so normalise instead
+        // of blindly appending (which produced "…RepositoryRepository").
+        $repoName = $this->defineRepositoryFilename($name);
 
         return [$namespace, $repoName];
     }

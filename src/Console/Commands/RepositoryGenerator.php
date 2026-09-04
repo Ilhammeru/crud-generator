@@ -46,7 +46,7 @@ class RepositoryGenerator extends Command
 
         $fixModelName = $this->resolveModelName($repo, $modelName);
 
-        if (!$mainService->checkClassExistance(GeneratorType::Model, $fixModelName)) {
+        if (!$mainService->checkClassExistance(GeneratorType::Model, $fixModelName, $moduleName)) {
             // Create model first
             $mainService->createModelFromCommand($fixModelName, $moduleName);
         }

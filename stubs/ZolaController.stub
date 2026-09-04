@@ -1,0 +1,28 @@
+<?php
+
+namespace {{NAMESPACE}};
+
+use App\Http\Controllers\Controller;
+use {{SERVICENAMESPACE}};
+
+class {{CLASSNAME}} extends Controller
+{
+    public function __construct(
+        private readonly {{SERVICENAME}} $service
+    ) {}
+
+    public function index()
+    {
+        //
+    }
+
+    public function store()
+    {
+        //
+    }
+
+    public function update()
+    {
+        //
+    }
+}
